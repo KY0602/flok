@@ -48,21 +48,26 @@ def init_note_dataset(note_dataset_id,path):
     :param path: 数据集路径
     :return:
     '''
-    # 根据路径拿到所有图片
+    # 根据路径拿到所有数据
     try:
-        pics=file_sys.get_image_file_dict_list(path)
+        note_dataset = NoteDataset.query.get(note_dataset_id)
+        data_instances = []
+        if note_dataset.note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
+            data_instances = file_sys.get_image_file_dict_list(path)
+        elif note_dataset.note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
+            data_instances = file_sys.get_audio_file_dict_list(path)
     except Exception:
         return None,'路径有误'
-    for items in pics:
+
+    for items in data_instances:
         if items is None:
             continue
-        picture = PictureInstance()
-        picture.name = items['file_name']
-        picture.src = items['url']
-        picture.note_dataset_id = note_dataset_id
-        db.session.add(picture)
+        data_ins = PictureInstance()
+        data_ins.name = items['file_name']
+        data_ins.src = items['url']
+        data_ins.note_dataset_id = note_dataset_id
+        db.session.add(data_ins)
 
-    note_dataset = NoteDataset.query.get(note_dataset_id)
     note_dataset.state = NORMAL_STATE
     try:
         db.session.commit()
@@ -105,25 +110,29 @@ def pre_synchronice(params):
 
 def synchronize_note_dataset(note_dataset_id,path):
     PictureInstance.query.filter_by(note_dataset_id=note_dataset_id).update({'is_delete': True})
-    pics=file_sys.get_image_file_dict_list(path)
+    note_dataset = NoteDataset.query.get(note_dataset_id)
+    data_instances = []
+    if note_dataset.note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
+        data_instances = file_sys.get_image_file_dict_list(path)
+    elif note_dataset.note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
+        data_instances = file_sys.get_audio_file_dict_list(path)
 
-    for items in pics:
+    for items in data_instances:
         if items is None:
             continue
         tmp = PictureInstance.query.filter_by(note_dataset_id=note_dataset_id,src=items['url']).first()
         if tmp is None:
-            picture = PictureInstance()
-            picture.name = items['file_name']
-            picture.src = items['url']
-            picture.note_dataset_id = note_dataset_id
-            db.session.add(picture)
+            data_ins = PictureInstance()
+            data_ins.name = items['file_name']
+            data_ins.src = items['url']
+            data_ins.note_dataset_id = note_dataset_id
+            db.session.add(data_ins)
         else:
             tmp.is_delete=False
 
     to_del = PictureInstance.query.filter_by(note_dataset_id=note_dataset_id,is_delete=True).all()
     for item in to_del:
         db.session.delete(item)
-    note_dataset = NoteDataset.query.get(note_dataset_id)
     note_dataset.state=NORMAL_STATE
     try:
         db.session.commit()
@@ -200,17 +209,17 @@ def query_note_dataset(params):
 
     title_list=[]
     title_list.append({
-        'label': '全部图片',
+        'label': '全部数据',
         'number': len(note_dataset.picture_instances),
         'name': 'first',
     })
     title_list.append({
-        'label': '已标注图片',
+        'label': '已标注数据',
         'number': PictureInstance.query.filter_by(note_dataset_id=params['id'],is_note=True).count(),
         'name': 'second',
     })
     title_list.append({
-        'label': '未标注图片',
+        'label': '未标注数据',
         'number': PictureInstance.query.filter_by(note_dataset_id=params['id'],is_note=False).count(),
         'name': 'third',
     })
@@ -270,7 +279,11 @@ def list_note_type(params):
     ret['note_types'] = notes
 
     paths=[]
-    datasets = Dataset.query.filter_by(type='image').all()
+    datasets=()
+    if note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
+        datasets = Dataset.query.filter_by(type='image').all()
+    elif note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
+        datasets = Dataset.query.filter_by(type='audio').all()
     for dataset in datasets:
         item = {}
         item['id'] = dataset.nickname
@@ -369,7 +382,7 @@ def save_note_info(note_infos, picture_id):
 
     picture = PictureInstance.query.get(picture_id)
     if picture is None:
-        return None, '数据库中无此id的图片'
+        return None, '数据库中无此id的数据'
     labels = picture.relation_pic_labs
     for label in labels:
         db.session.delete(label)
@@ -398,7 +411,7 @@ def save_note_info(note_infos, picture_id):
 def get_note_info_list(picture_id):
     picture = PictureInstance.query.get(picture_id)
     if picture is None:
-        return None, '数据库中无此id的图片'
+        return None, '数据库中无此id的数据'
     labels = picture.relation_pic_labs
     ret=[]
     for label in labels:
@@ -553,7 +566,7 @@ def start_note(params):
         ret['show_type'] = params['show_type']
         pic = PictureInstance.query.filter_by(id=params['pic_id']).first()
         if pic is None:
-            return None,{'status':False,'info':'不存在该图片'}
+            return None,{'status':False,'info':'不存在该数据'}
 
 
     ret['id'] = pic.id
