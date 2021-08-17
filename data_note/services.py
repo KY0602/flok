@@ -391,8 +391,6 @@ def save_note_info(note_infos, picture_id):
     for note_info in note_infos:
         label = RelationPicLab()
         label.note_data_id = picture_id
-        if note_info['label_id'] is None:
-            return None, '未赋予标注信息'
         label.label_id = note_info['label_id']
         try:
             label.content = json.dumps(note_info['content'])
