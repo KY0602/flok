@@ -10,6 +10,7 @@ import math
 from threading import Thread
 from config import Config
 import sys, os
+import csv
 
 NORMAL_STATE=1
 SYNCING_STATE=0
@@ -581,8 +582,8 @@ def pre_upload(params):
     :return:
     '''
     ret = anylearn.connect_anylearn()
-    if ret != 'ok':
-        return None,ret
+    #if ret != 'ok':
+        #return None,ret
     fast = params['fast']
     name = params['name']
     note_dataset = NoteDataset.query.get(params['id'])
@@ -613,6 +614,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
     file_news = os.path.join(Config.ANYLEARN, dir_id + '.zip')  # 压缩后文件夹的名字
     id = None
     try:
+        store_standard_dataset(note_dataset_id, tmp_dir)
         note_dataset = NoteDataset.query.get(note_dataset_id)
 
         # 目标检测打包
@@ -654,8 +656,34 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                     f.write(img)
                 f.close()
 
+        elif note_dataset.note_type_id == 'a030fd61081c4f6e8acf096b5718edec':
+            labels = note_dataset.label_instances
+            audios = note_dataset.picture_instances
+            with open(os.path.join(tmp_dir, 'labels.txt'), 'w') as f:
+                for label in labels:
+                    f.write(label.name + '\n')
+                f.close()
+            count = 0
+
+            audio_dir = os.path.join(tmp_dir, 'Audios')
+            os.mkdir(audio_dir)
+
+            for audio in audios:
+                src = audio.src
+                audio_path = os.path.join(audio_dir, str(count) + '.wav')
+                count += 1
+                relation_pic_labs = audio.relation_pic_labs
+                FLOK_URL = 'http://' + Config.SERVER_IP + ":" + Config.SERVER_PORT
+                response = requests.get(FLOK_URL + str(src))
+                # 获取的文本实际上是图片的二进制文本
+                data_ins = response.content
+                # 将他拷贝到本地文件 w 写  b 二进制  wb代表写入二进制文本
+                with open(audio_path, 'wb') as f:
+                    f.write(data_ins)
+                f.close()
+
         # 图像分类打包
-        elif note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e':
+        elif note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e' or note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
             labels = note_dataset.label_instances
             for label in labels:
                 label_dir = os.path.join(tmp_dir,label.name)
@@ -663,16 +691,20 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                 relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
                 count=0
                 for rel in relation_pic_labs:
-                    pic_path = os.path.join(label_dir,str(count)+'.jpg')
+                    data_path = ()
+                    if note_dataset.note_dataset_type_id == '27bbe41cca3e43d1b8515b35a6ffb1ab':
+                        data_path = os.path.join(label_dir,str(count)+'.jpg')
+                    elif note_dataset.note_dataset_type_id == '4624cf7bc59c4636a89a7ee2fbfcf931':
+                        data_path = os.path.join(label_dir,str(count)+'.wav')
                     count+=1
-                    src = rel.picture_instance.src
+                    src = rel.note_data_instance.src
                     FLOK_URL = 'http://' + Config.SERVER_IP + ":" + Config.SERVER_PORT
                     response = requests.get(FLOK_URL+str(src))
                     # 获取的文本实际上是图片的二进制文本
-                    img = response.content
+                    data_ins = response.content
                     # 将他拷贝到本地文件 w 写  b 二进制  wb代表写入二进制文本
-                    with open(pic_path, 'wb') as f:
-                        f.write(img)
+                    with open(data_path, 'wb') as f:
+                        f.write(data_ins)
                     f.close()
 
         startdir = tmp_dir  # 要压缩的文件夹路径
@@ -731,5 +763,83 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
         except Exception as e:
             return None, '修改失败'
         return None, str(e)
+
+def store_standard_dataset(note_dataset_id, dir):
+    note_dataset = NoteDataset.query.get(note_dataset_id)
+    csv_dir = os.path.join(dir, 'data_output.csv')
+
+    #Classify(Image)
+    if note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e':
+        with open(csv_dir, mode='w', newline='') as csv_out:
+            fieldnames = ['sound_id', 'tags']
+            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
+            writer.writeheader()
+            labels = note_dataset.label_instances
+            for label in labels:
+                relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
+                count = 0
+                for rel in relation_pic_labs:
+                    writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count) + '.jpg', 'tags': rel.label_instance.name})
+                    count += 1
+
+    #Cut(Image)
+    elif note_dataset.note_type_id == '822e2bc74cb749d1b617162a05dfd8fa':
+        with open(csv_dir, mode='w', newline='') as csv_out:
+            fieldnames = ['audio', 'id', 'label']
+            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
+            writer.writeheader()
+            path ='audios/'
+            data_ins = note_dataset.picture_instances
+            count = 0
+            for data in data_ins:
+                relation_pic_labs = data.relation_pic_labs
+                data_tmp = []
+                for rel in relation_pic_labs:
+                    content_conv = {}
+                    content = json.loads(rel.content)
+                    content_conv['left'] = str(int(content['left']))
+                    content_conv['top'] = str(int(content['top']))
+                    content_conv['right'] = str(int(content['width'] + content['left']))
+                    content_conv['bottom'] = str(int(content['height'] + content['top']))
+                    content_conv['labels'] = rel.label_instance.name
+                    data_tmp.append(content_conv)
+                writer.writerow({'audio': path + str(count) + '.jpg', 'id': count, 'label': json.dumps(data_tmp)})
+                count += 1
+
+    #Classify(Audio)
+    elif note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
+        with open(csv_dir, mode='w', newline='') as csv_out:
+            fieldnames = ['sound_id', 'tags']
+            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
+            writer.writeheader()
+            labels = note_dataset.label_instances
+            for label in labels:
+                relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
+                count = 0
+                for rel in relation_pic_labs:
+                    writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count) + '.wav', 'tags': rel.label_instance.name})
+                    count += 1
+
+    #Cut(Audio)
+    elif note_dataset.note_type_id == 'a030fd61081c4f6e8acf096b5718edec':
+        with open(csv_dir, mode='w', newline='') as csv_out:
+            fieldnames = ['audio', 'id', 'label']
+            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
+            writer.writeheader()
+            path ='Audios/'
+            data_ins = note_dataset.picture_instances
+            count = 0
+            for data in data_ins:
+                relation_pic_labs = data.relation_pic_labs
+                data_tmp = []
+                for rel in relation_pic_labs:
+                    content_conv = {}
+                    content = json.loads(rel.content)
+                    content_conv['start'] = str(round(float(content['start']),2))
+                    content_conv['end'] = str(round(float(content['end']),2))
+                    content_conv['labels'] = rel.label_instance.name
+                    data_tmp.append(content_conv)
+                writer.writerow({'audio': path + str(count) + '.wav', 'id': count, 'label': json.dumps(data_tmp)})
+                count += 1
 
 
