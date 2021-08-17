@@ -391,6 +391,8 @@ def save_note_info(note_infos, picture_id):
     for note_info in note_infos:
         label = RelationPicLab()
         label.note_data_id = picture_id
+        if note_info['label_id'] is None:
+            return None, '未赋予标注信息'
         label.label_id = note_info['label_id']
         try:
             label.content = json.dumps(note_info['content'])
@@ -768,46 +770,8 @@ def store_standard_dataset(note_dataset_id, dir):
     note_dataset = NoteDataset.query.get(note_dataset_id)
     csv_dir = os.path.join(dir, 'data_output.csv')
 
-    #Classify(Image)
-    if note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e':
-        with open(csv_dir, mode='w', newline='') as csv_out:
-            fieldnames = ['sound_id', 'tags']
-            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
-            writer.writeheader()
-            labels = note_dataset.label_instances
-            for label in labels:
-                relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
-                count = 0
-                for rel in relation_pic_labs:
-                    writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count) + '.jpg', 'tags': rel.label_instance.name})
-                    count += 1
-
-    #Cut(Image)
-    elif note_dataset.note_type_id == '822e2bc74cb749d1b617162a05dfd8fa':
-        with open(csv_dir, mode='w', newline='') as csv_out:
-            fieldnames = ['audio', 'id', 'label']
-            writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
-            writer.writeheader()
-            path ='audios/'
-            data_ins = note_dataset.picture_instances
-            count = 0
-            for data in data_ins:
-                relation_pic_labs = data.relation_pic_labs
-                data_tmp = []
-                for rel in relation_pic_labs:
-                    content_conv = {}
-                    content = json.loads(rel.content)
-                    content_conv['left'] = str(int(content['left']))
-                    content_conv['top'] = str(int(content['top']))
-                    content_conv['right'] = str(int(content['width'] + content['left']))
-                    content_conv['bottom'] = str(int(content['height'] + content['top']))
-                    content_conv['labels'] = rel.label_instance.name
-                    data_tmp.append(content_conv)
-                writer.writerow({'audio': path + str(count) + '.jpg', 'id': count, 'label': json.dumps(data_tmp)})
-                count += 1
-
     #Classify(Audio)
-    elif note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
+    if note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
         with open(csv_dir, mode='w', newline='') as csv_out:
             fieldnames = ['sound_id', 'tags']
             writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
