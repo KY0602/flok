@@ -582,8 +582,8 @@ def pre_upload(params):
     :return:
     '''
     ret = anylearn.connect_anylearn()
-    #if ret != 'ok':
-        #return None,ret
+    if ret != 'ok':
+        return None,ret
     fast = params['fast']
     name = params['name']
     note_dataset = NoteDataset.query.get(params['id'])
@@ -656,6 +656,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                     f.write(img)
                 f.close()
 
+        #时间线分割
         elif note_dataset.note_type_id == 'a030fd61081c4f6e8acf096b5718edec':
             labels = note_dataset.label_instances
             audios = note_dataset.picture_instances
@@ -682,7 +683,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                     f.write(data_ins)
                 f.close()
 
-        # 图像分类打包
+        # 图像&音频分类
         elif note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e' or note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
             labels = note_dataset.label_instances
             for label in labels:
@@ -768,7 +769,7 @@ def store_standard_dataset(note_dataset_id, dir):
     note_dataset = NoteDataset.query.get(note_dataset_id)
     csv_dir = os.path.join(dir, 'data_output.csv')
 
-    #Classify(Audio)
+    #音频分类
     if note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
         with open(csv_dir, mode='w', newline='') as csv_out:
             fieldnames = ['sound_id', 'tags']
@@ -782,7 +783,7 @@ def store_standard_dataset(note_dataset_id, dir):
                     writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count) + '.wav', 'tags': rel.label_instance.name})
                     count += 1
 
-    #Cut(Audio)
+    #时间线分割
     elif note_dataset.note_type_id == 'a030fd61081c4f6e8acf096b5718edec':
         with open(csv_dir, mode='w', newline='') as csv_out:
             fieldnames = ['audio', 'id', 'label']
