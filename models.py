@@ -1286,7 +1286,7 @@ class NoteDataset(db.Model,Base):
     # 为2表示上传anylearn中，为-2表示上传失败
     state = db.Column(db.Integer,default=0)
 
-    picture_instances=db.relationship("PictureInstance",backref="note_dataset",cascade="all, delete")
+    note_data_instances=db.relationship("NoteDataInstance",backref="note_dataset",cascade="all, delete")
     label_instances = db.relationship("LabelInstance",backref="note_dataset",cascade="all, delete")
 
     def __repr__(self):
@@ -1323,7 +1323,7 @@ class NoteType(db.Model,Base):
     def __init__(self):
         self.id = str(uuid.uuid4()).replace("-", "")
 
-class PictureInstance(db.Model,Base):
+class NoteDataInstance(db.Model,Base):
     __tablename__ = 'note_data_instance'
     id = db.Column(db.String(32), primary_key=True)
     name = db.Column(db.String(50))
@@ -1333,10 +1333,10 @@ class PictureInstance(db.Model,Base):
     create_time = db.Column(db.DateTime, default=datetime.now)
     note_dataset_id = db.Column(db.String(32), db.ForeignKey('note_dataset.id'))
 
-    relation_pic_labs = db.relationship("RelationPicLab",backref="note_data_instance",cascade="all, delete")
+    relation_data_labs = db.relationship("RelationDataLab",backref="note_data_instance",cascade="all, delete")
 
     def __repr__(self):
-        return '<PictureInstance %r>' % self.name
+        return '<NoteDataInstance %r>' % self.name
 
     def __init__(self):
         self.id = str(uuid.uuid4()).replace("-", "")
@@ -1348,7 +1348,7 @@ class LabelInstance(db.Model,Base):
     color = db.Column(db.String(255))
     note_dataset_id = db.Column(db.String(32), db.ForeignKey('note_dataset.id'))
 
-    relation_pic_labs = db.relationship("RelationPicLab",backref="label_instance",cascade="all, delete")
+    relation_data_labs = db.relationship("RelationDataLab",backref="label_instance",cascade="all, delete")
 
     def __repr__(self):
         return '<LabelInstance %r>' % self.name
@@ -1356,7 +1356,7 @@ class LabelInstance(db.Model,Base):
     def __init__(self):
         self.id = str(uuid.uuid4()).replace("-", "")
 
-class RelationPicLab(db.Model,Base):
+class RelationDataLab(db.Model,Base):
     __tablename__ = 'relation_data_label'
     id = db.Column(db.String(32), primary_key=True)
     label_id = db.Column(db.String(32), db.ForeignKey('label_instance.id'))
@@ -1364,7 +1364,7 @@ class RelationPicLab(db.Model,Base):
     content = db.Column(db.String(512))
 
     def __repr__(self):
-        return '<RelationPicLab %r>' % self.content
+        return '<RelationDataLab %r>' % self.content
 
     def __init__(self):
         self.id = str(uuid.uuid4()).replace("-", "")
