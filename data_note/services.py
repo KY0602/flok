@@ -806,7 +806,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                     f.write(img)
                 f.close()
 
-        # 图像&音频分类
+        # 图像分类
         elif note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e':
             labels = note_dataset.label_instances
             for label in labels:
