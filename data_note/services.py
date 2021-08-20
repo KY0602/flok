@@ -63,7 +63,7 @@ def init_note_dataset(note_dataset_id,path):
     for items in data_instances:
         if items is None:
             continue
-        data_ins = PictureInstance()
+        data_ins = NoteDataInstance()
         data_ins.name = items['file_name']
         data_ins.src = items['url']
         data_ins.note_dataset_id = note_dataset_id
@@ -110,7 +110,7 @@ def pre_synchronice(params):
 
 
 def synchronize_note_dataset(note_dataset_id,path):
-    PictureInstance.query.filter_by(note_dataset_id=note_dataset_id).update({'is_delete': True})
+    NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id).update({'is_delete': True})
     note_dataset = NoteDataset.query.get(note_dataset_id)
     data_instances = []
     if note_dataset.note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
@@ -121,9 +121,9 @@ def synchronize_note_dataset(note_dataset_id,path):
     for items in data_instances:
         if items is None:
             continue
-        tmp = PictureInstance.query.filter_by(note_dataset_id=note_dataset_id,src=items['url']).first()
+        tmp = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id,src=items['url']).first()
         if tmp is None:
-            data_ins = PictureInstance()
+            data_ins = NoteDataInstance()
             data_ins.name = items['file_name']
             data_ins.src = items['url']
             data_ins.note_dataset_id = note_dataset_id
@@ -131,7 +131,7 @@ def synchronize_note_dataset(note_dataset_id,path):
         else:
             tmp.is_delete=False
 
-    to_del = PictureInstance.query.filter_by(note_dataset_id=note_dataset_id,is_delete=True).all()
+    to_del = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id,is_delete=True).all()
     for item in to_del:
         db.session.delete(item)
     note_dataset.state=NORMAL_STATE
@@ -211,17 +211,17 @@ def query_note_dataset(params):
     title_list=[]
     title_list.append({
         'label': '全部数据',
-        'number': len(note_dataset.picture_instances),
+        'number': len(note_dataset.note_data_instances),
         'name': 'first',
     })
     title_list.append({
         'label': '已标注数据',
-        'number': PictureInstance.query.filter_by(note_dataset_id=params['id'],is_note=True).count(),
+        'number': NoteDataInstance.query.filter_by(note_dataset_id=params['id'],is_note=True).count(),
         'name': 'second',
     })
     title_list.append({
         'label': '未标注数据',
-        'number': PictureInstance.query.filter_by(note_dataset_id=params['id'],is_note=False).count(),
+        'number': NoteDataInstance.query.filter_by(note_dataset_id=params['id'],is_note=False).count(),
         'name': 'third',
     })
     ret['title_list'] = title_list
@@ -241,10 +241,10 @@ def list_note_dataset():
         item['note_type'] = note_dataset.note_type.name     #标注类型名字#
         item['data_type'] = note_dataset.note_dataset_type.name     #数据集类型名字#
         item['state'] = note_dataset.state      #标注集状态#
-        item['file_num'] = len(note_dataset.picture_instances)      #标注集中文件数#
+        item['file_num'] = len(note_dataset.note_data_instances)      #标注集中文件数#
         item['description']=note_dataset.description        #标注集描述#
         item['path'] = note_dataset.path    #标注集路径#
-        num = PictureInstance.query.filter_by(note_dataset_id=note_dataset.id,is_note=True).count()     #标注集中已被标注个数#
+        num = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset.id,is_note=True).count()     #标注集中已被标注个数#
         item['process'] = str(num)+'/'+str(item['file_num'])    #“已被标注个数”/“总个数”#
         ret.append(item)
     return ret, 'ok'
@@ -348,10 +348,10 @@ def delete_note(params):
     note = LabelInstance.query.get(params['id'])
     if note is None:
         return None, '数据库中无此id的标签'
-    relation_pic_labs = note.relation_pic_labs
-    for rel in relation_pic_labs:
-        if len(rel.picture_instance.relation_pic_labs)==1:
-            rel.picture_instance.is_note=False
+    relation_data_labs = note.relation_data_labs
+    for rel in relation_data_labs:
+        if len(rel.note_data_instance.relation_data_labs)==1:
+            rel.note_data_instance.is_note=False
     db.session.delete(note)
     try:
         db.session.commit()
@@ -379,18 +379,18 @@ def list_note(params):
     return ret, 'ok'
 
 
-def save_note_info(note_infos, picture_id):
+def save_note_info(note_infos, data_id):
 
-    picture = PictureInstance.query.get(picture_id)
-    if picture is None:
+    data_ins = NoteDataInstance.query.get(data_id)
+    if data_ins is None:
         return None, '数据库中无此id的数据'
-    labels = picture.relation_pic_labs
+    labels = data_ins.relation_data_labs
     for label in labels:
         db.session.delete(label)
 
     for note_info in note_infos:
-        label = RelationPicLab()
-        label.note_data_id = picture_id
+        label = RelationDataLab()
+        label.note_data_id = data_id
         label.label_id = note_info['label_id']
         try:
             label.content = json.dumps(note_info['content'])
@@ -399,9 +399,9 @@ def save_note_info(note_infos, picture_id):
         db.session.add(label)
     try:
         if len(note_infos)>0:
-            picture.is_note=True
+            data_ins.is_note=True
         else:
-            picture.is_note=False
+            data_ins.is_note=False
         db.session.commit()
         return True,'ok'
     except Exception as e:
@@ -409,11 +409,11 @@ def save_note_info(note_infos, picture_id):
         return None, str(e)
 
 
-def get_note_info_list(picture_id):
-    picture = PictureInstance.query.get(picture_id)
-    if picture is None:
+def get_note_info_list(data_id):
+    data_ins = NoteDataInstance.query.get(data_id)
+    if data_ins is None:
         return None, '数据库中无此id的数据'
-    labels = picture.relation_pic_labs
+    labels = data_ins.relation_data_labs
     ret=[]
     for label in labels:
         item={}
@@ -444,16 +444,16 @@ def get_pictures(params):
     if note_dataset is None:
         return None, '数据库中无此id的标注集'
     if params['value'] != '':
-        pic_list = PictureInstance.query.filter_by(note_dataset_id=params['note_dataset_id']).\
-            filter(PictureInstance.name.ilike("%" + params['value'] + "%"))
+        pic_list = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id']).\
+            filter(NoteDataInstance.name.ilike("%" + params['value'] + "%"))
     else:
-        pic_list = PictureInstance.query.filter_by(note_dataset_id=params['note_dataset_id'])
+        pic_list = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id'])
     if params['with_note'] is None:
         pass
     elif params['with_note']=='true':
-        pic_list = pic_list.filter(PictureInstance.is_note == True)
+        pic_list = pic_list.filter(NoteDataInstance.is_note == True)
     else:
-        pic_list = pic_list.filter(PictureInstance.is_note == False)
+        pic_list = pic_list.filter(NoteDataInstance.is_note == False)
 
     pic_list = sorted(pic_list, key=lambda cp: cp.create_time.strftime(TIME_FORMAT), reverse=False)
 
@@ -496,17 +496,17 @@ def get_picture_group(params):
     if note_dataset is None:
         return None, '数据库中无此id的标注集'
     if params['value'] != '':
-        pic_list = PictureInstance.query.filter_by(note_dataset_id=params['note_dataset_id']). \
-            filter(PictureInstance.name.ilike("%" + params['value'] + "%"))
+        pic_list = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id']). \
+            filter(NoteDataInstance.name.ilike("%" + params['value'] + "%"))
     else:
-        pic_list = PictureInstance.query.filter_by(note_dataset_id=params['note_dataset_id'])
+        pic_list = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id'])
 
     if params['with_note'] is None:
         start = offset + 1
         pic_list = sorted(pic_list, key=lambda cp: cp.create_time.strftime(TIME_FORMAT), reverse=False)
         end = min(len(pic_list), start + int(num) - 1)
     elif params['with_note'] == 'true':
-        pic_list = pic_list.filter(PictureInstance.is_note == True)
+        pic_list = pic_list.filter(NoteDataInstance.is_note == True)
         pic_list = sorted(pic_list, key=lambda cp: cp.create_time.strftime(TIME_FORMAT), reverse=False)
         if direction=='next':
             noted_num = last_total_num-len(pic_list)
@@ -516,7 +516,7 @@ def get_picture_group(params):
             start = offset + 1
             end = min(len(pic_list), start + int(num) - 1)
     else:
-        pic_list = pic_list.filter(PictureInstance.is_note == False)
+        pic_list = pic_list.filter(NoteDataInstance.is_note == False)
         pic_list = sorted(pic_list, key=lambda cp: cp.create_time.strftime(TIME_FORMAT), reverse=False)
         if direction=='next':
             noted_num = last_total_num-len(pic_list)
@@ -556,23 +556,23 @@ def start_note(params):
     :return:
     '''
     ret = {}
-    if params['pic_id'] is None:
+    if params['data_id'] is None:
         if params['note_dataset_id'] is None:
             return None,{'status':False,'info':'缺少参数'}
-        pic = PictureInstance.query.filter_by(note_dataset_id=params['note_dataset_id'],is_note=False).first()
+        data = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id'],is_note=False).first()
         ret['show_type'] = 'third'
-        if pic is None:
+        if data is None:
             return None,{'status':True,'info':'您已全部标注'}
     else:
         ret['show_type'] = params['show_type']
-        pic = PictureInstance.query.filter_by(id=params['pic_id']).first()
-        if pic is None:
+        data = NoteDataInstance.query.filter_by(id=params['data_id']).first()
+        if data is None:
             return None,{'status':False,'info':'不存在该数据'}
 
 
-    ret['id'] = pic.id
-    ret['src'] = pic.src
-    ret['name'] = pic.name
+    ret['id'] = data.id
+    ret['src'] = data.src
+    ret['name'] = data.name
     return ret,'ok'
 
 
@@ -620,7 +620,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
         # 目标检测打包
         if note_dataset.note_type_id == '822e2bc74cb749d1b617162a05dfd8fa':
             labels = note_dataset.label_instances
-            pictures = note_dataset.picture_instances
+            pictures = note_dataset.note_data_instances
             with open(os.path.join(tmp_dir, 'labels.txt'), 'w') as f:
                 for label in labels:
                     f.write(label.name+'\n')
@@ -637,10 +637,10 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                 pic_path = os.path.join(pic_dir, str(count)+'.jpg')
                 label_path = os.path.join(label_dir, str(count)+'.txt')
                 count+=1
-                relation_pic_labs = picture.relation_pic_labs
+                relation_data_labs = picture.relation_data_labs
                 with open(label_path, 'w') as f:
-                    f.write(str(len(relation_pic_labs)))
-                    for rel in relation_pic_labs:
+                    f.write(str(len(relation_data_labs)))
+                    for rel in relation_data_labs:
                         content = json.loads(rel.content)
                         f.write('\n' + str(int(content['left']))+' '+str(int(content['top']))+' '
                                 +str(int(content['width']+content['left']))+' '
@@ -659,7 +659,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
         #时间线分割
         elif note_dataset.note_type_id == 'a030fd61081c4f6e8acf096b5718edec':
             labels = note_dataset.label_instances
-            audios = note_dataset.picture_instances
+            audios = note_dataset.note_data_instances
             with open(os.path.join(tmp_dir, 'labels.txt'), 'w') as f:
                 for label in labels:
                     f.write(label.name + '\n')
@@ -673,7 +673,6 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                 src = audio.src
                 audio_path = os.path.join(audio_dir, str(count) + '.wav')
                 count += 1
-                relation_pic_labs = audio.relation_pic_labs
                 FLOK_URL = 'http://' + Config.SERVER_IP + ":" + Config.SERVER_PORT
                 response = requests.get(FLOK_URL + str(src))
                 # 获取的文本实际上是图片的二进制文本
@@ -689,9 +688,9 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
             for label in labels:
                 label_dir = os.path.join(tmp_dir,label.name)
                 os.mkdir(label_dir)
-                relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
+                relation_data_labs = RelationDataLab.query.filter_by(label_id=label.id).all()
                 count=0
-                for rel in relation_pic_labs:
+                for rel in relation_data_labs:
                     data_path = ()
                     if note_dataset.note_dataset_type_id == '27bbe41cca3e43d1b8515b35a6ffb1ab':
                         data_path = os.path.join(label_dir,str(count)+'.jpg')
@@ -777,9 +776,9 @@ def store_standard_dataset(note_dataset_id, dir):
             writer.writeheader()
             labels = note_dataset.label_instances
             for label in labels:
-                relation_pic_labs = RelationPicLab.query.filter_by(label_id=label.id).all()
+                relation_pic_labs = RelationDataLab.query.filter_by(label_id=label.id).all()
                 count = 0
-                for rel in relation_pic_labs:
+                for rel in relation_data_labs:
                     writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count) + '.wav', 'tags': rel.label_instance.name})
                     count += 1
 
@@ -790,12 +789,12 @@ def store_standard_dataset(note_dataset_id, dir):
             writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
             writer.writeheader()
             path ='Audios/'
-            data_ins = note_dataset.picture_instances
+            data_ins = note_dataset.note_data_instances
             count = 0
             for data in data_ins:
-                relation_pic_labs = data.relation_pic_labs
+                relation_data_labs = data.relation_data_labs
                 data_tmp = []
-                for rel in relation_pic_labs:
+                for rel in relation_data_labs:
                     content_conv = {}
                     content = json.loads(rel.content)
                     content_conv['start'] = str(round(float(content['start']),2))
