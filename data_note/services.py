@@ -348,9 +348,9 @@ def delete_note(params):
     note = LabelInstance.query.get(params['id'])
     if note is None:
         return None, '数据库中无此id的标签'
-    relation_data_labs = note.relation_data_labs
-    for rel in relation_data_labs:
-        if len(rel.note_data_instance.relation_data_labs)==1:
+    relation_data_labels = note.relation_data_labels
+    for rel in relation_data_labels:
+        if len(rel.note_data_instance.relation_data_labels)==1:
             rel.note_data_instance.is_note=False
     db.session.delete(note)
     try:
@@ -384,12 +384,12 @@ def save_note_info(note_infos, data_id):
     data_ins = NoteDataInstance.query.get(data_id)
     if data_ins is None:
         return None, '数据库中无此id的数据'
-    labels = data_ins.relation_data_labs
+    labels = data_ins.relation_data_labels
     for label in labels:
         db.session.delete(label)
 
     for note_info in note_infos:
-        label = RelationDataLab()
+        label = RelationDataLabel()
         label.note_data_id = data_id
         label.label_id = note_info['label_id']
         try:
@@ -413,7 +413,7 @@ def get_note_info_list(data_id):
     data_ins = NoteDataInstance.query.get(data_id)
     if data_ins is None:
         return None, '数据库中无此id的数据'
-    labels = data_ins.relation_data_labs
+    labels = data_ins.relation_data_labels
     ret=[]
     for label in labels:
         item={}
@@ -625,9 +625,9 @@ def store_standard_dataset(note_dataset_id, name):
                 writer.writeheader()
                 labels = note_dataset.label_instances
                 for label in labels:
-                    relation_data_labs = RelationDataLab.query.filter_by(label_id=label.id).all()
+                    relation_data_labels = RelationDataLabel.query.filter_by(label_id=label.id).all()
                     count_tmp = 0
-                    for rel in relation_data_labs:
+                    for rel in relation_data_labels:
                         writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count_tmp) + '.wav', 'tags': rel.label_instance.name})
                         count_tmp += 1
 
@@ -635,9 +635,9 @@ def store_standard_dataset(note_dataset_id, name):
             for label in labels:
                 label_dir = os.path.join(tmp_dir, label.name)
                 os.mkdir(label_dir)
-                relation_data_labs = RelationDataLab.query.filter_by(label_id=label.id).all()
+                relation_data_labels = RelationDataLabel.query.filter_by(label_id=label.id).all()
                 count = 0
-                for rel in relation_data_labs:
+                for rel in relation_data_labels:
                     data_path = os.path.join(label_dir, str(count) + '.wav')
                     count += 1
                     src = rel.note_data_instance.src
@@ -659,9 +659,9 @@ def store_standard_dataset(note_dataset_id, name):
                 data_ins = note_dataset.note_data_instances
                 count_tmp = 0
                 for data in data_ins:
-                    relation_data_labs = data.relation_data_labs
+                    relation_data_labels = data.relation_data_labels
                     data_tmp = []
-                    for rel in relation_data_labs:
+                    for rel in relation_data_labels:
                         content_conv = {}
                         content = json.loads(rel.content)
                         content_conv['start'] = str(round(float(content['start']),2))
@@ -787,10 +787,10 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                 pic_path = os.path.join(pic_dir, str(count)+'.jpg')
                 label_path = os.path.join(label_dir, str(count)+'.txt')
                 count+=1
-                relation_data_labs = picture.relation_data_labs
+                relation_data_labels = picture.relation_data_labels
                 with open(label_path, 'w') as f:
-                    f.write(str(len(relation_data_labs)))
-                    for rel in relation_data_labs:
+                    f.write(str(len(relation_data_labels)))
+                    for rel in relation_data_labels:
                         content = json.loads(rel.content)
                         f.write('\n' + str(int(content['left']))+' '+str(int(content['top']))+' '
                                 +str(int(content['width']+content['left']))+' '
@@ -812,9 +812,9 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
             for label in labels:
                 label_dir = os.path.join(tmp_dir,label.name)
                 os.mkdir(label_dir)
-                relation_data_labs = RelationDataLab.query.filter_by(label_id=label.id).all()
+                relation_data_labels = RelationDataLabel.query.filter_by(label_id=label.id).all()
                 count=0
-                for rel in relation_data_labs:
+                for rel in relation_data_labels:
                     data_path = os.path.join(label_dir,str(count)+'.jpg')
                     count+=1
                     src = rel.note_data_instance.src
