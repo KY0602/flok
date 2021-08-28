@@ -620,7 +620,7 @@ def store_standard_dataset(note_dataset_id, name):
         # 音频分类
         if note_dataset.note_type_id == '669d056db83c4280b5a3b72d4f92be35':
             with open(csv_dir, mode='w', newline='') as csv_out:
-                fieldnames = ['sound_id', 'tags']
+                fieldnames = ['fname', 'labels']
                 writer = csv.DictWriter(csv_out, fieldnames=fieldnames)
                 writer.writeheader()
                 labels = note_dataset.label_instances
@@ -628,7 +628,7 @@ def store_standard_dataset(note_dataset_id, name):
                     relation_data_labels = RelationDataLabel.query.filter_by(label_id=label.id).all()
                     count_tmp = 0
                     for rel in relation_data_labels:
-                        writer.writerow({'sound_id': rel.label_instance.name + '/' + str(count_tmp) + '.wav', 'tags': rel.label_instance.name})
+                        writer.writerow({'fname': rel.label_instance.name + '/' + str(count_tmp) + '.wav', 'labels': rel.label_instance.name})
                         count_tmp += 1
 
             labels = note_dataset.label_instances
