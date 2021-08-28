@@ -614,7 +614,7 @@ def store_standard_dataset(note_dataset_id, name):
         os.mkdir(tmp_dir)
     file_news = os.path.join(Config.ANYLEARN, dir_id + '.zip')  # 压缩后文件夹的名字
     id = None
-    csv_dir = os.path.join(tmp_dir, 'data_output.csv')
+    csv_dir = os.path.join(tmp_dir, 'data_export.csv')
 
     try:
         # 音频分类
