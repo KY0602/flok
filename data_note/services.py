@@ -52,23 +52,31 @@ def init_note_dataset(note_dataset_id,path):
     # 根据路径拿到所有数据
     try:
         note_dataset = NoteDataset.query.get(note_dataset_id)
-        data_instances = []
-        if note_dataset.note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
-            data_instances = file_sys.get_image_file_dict_list(path)
-        elif note_dataset.note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
-            data_instances = file_sys.get_audio_file_dict_list(path)
+        type_id = note_dataset.note_dataset_type_id
+        datas = []
+        if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":  # 图片
+            datas = file_sys.get_image_file_dict_list(path)
+        elif type_id == "8019768c89db461db44eb1783a3beb50":  # 文本
+            pass
+        elif type_id == "02217a4cf1854bf09be4237d95f83c02":  # 视频
+            pass
+        elif type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":  # 音频
+            datas = file_sys.get_audio_file_dict_list(path)
+        elif type_id == "94c6b82e1c9340a68dd3c1ce3da03f3a":  # 时序数据
+            pass
     except Exception:
         return None,'路径有误'
 
-    for items in data_instances:
+    for items in datas:
         if items is None:
             continue
-        data_ins = NoteDataInstance()
-        data_ins.name = items['file_name']
-        data_ins.src = items['url']
-        data_ins.note_dataset_id = note_dataset_id
-        db.session.add(data_ins)
+        data = NoteDataInstance()
+        data.name = items['file_name']
+        data.src = items['url']
+        data.note_dataset_id = note_dataset_id
+        db.session.add(data)
 
+    note_dataset = NoteDataset.query.get(note_dataset_id)
     note_dataset.state = NORMAL_STATE
     try:
         db.session.commit()
@@ -112,28 +120,36 @@ def pre_synchronice(params):
 def synchronize_note_dataset(note_dataset_id,path):
     NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id).update({'is_delete': True})
     note_dataset = NoteDataset.query.get(note_dataset_id)
-    data_instances = []
-    if note_dataset.note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
-        data_instances = file_sys.get_image_file_dict_list(path)
-    elif note_dataset.note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
-        data_instances = file_sys.get_audio_file_dict_list(path)
+    type_id = note_dataset.note_dataset_type_id
+    datas = []
+    if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":  # 图片
+        datas = file_sys.get_image_file_dict_list(path)
+    elif type_id == "8019768c89db461db44eb1783a3beb50":  # 文本
+        pass
+    elif type_id == "02217a4cf1854bf09be4237d95f83c02":  # 视频
+        pass
+    elif type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":  # 音频
+        datas = file_sys.get_audio_file_dict_list(path)
+    elif type_id == "94c6b82e1c9340a68dd3c1ce3da03f3a":  # 时序数据
+        pass
 
-    for items in data_instances:
+    for items in datas:
         if items is None:
             continue
         tmp = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id,src=items['url']).first()
         if tmp is None:
-            data_ins = NoteDataInstance()
-            data_ins.name = items['file_name']
-            data_ins.src = items['url']
-            data_ins.note_dataset_id = note_dataset_id
-            db.session.add(data_ins)
+            data = NoteDataInstance()
+            data.name = items['file_name']
+            data.src = items['url']
+            data.note_dataset_id = note_dataset_id
+            db.session.add(data)
         else:
             tmp.is_delete=False
 
     to_del = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id,is_delete=True).all()
     for item in to_del:
         db.session.delete(item)
+    note_dataset = NoteDataset.query.get(note_dataset_id)
     note_dataset.state=NORMAL_STATE
     try:
         db.session.commit()
@@ -280,11 +296,19 @@ def list_note_type(params):
     ret['note_types'] = notes
 
     paths=[]
-    datasets=()
-    if note_dataset_type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":
+    datasets = []
+    type_id = note_dataset_type_id
+    if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":  # 图片
         datasets = Dataset.query.filter_by(type='image').all()
-    elif note_dataset_type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":
+    elif type_id == "8019768c89db461db44eb1783a3beb50":  # 文本
+        datasets = Dataset.query.filter_by(type='text').all()
+    elif type_id == "02217a4cf1854bf09be4237d95f83c02":  # 视频
+        datasets = Dataset.query.filter_by(type='video').all()
+    elif type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":  # 音频
         datasets = Dataset.query.filter_by(type='audio').all()
+    elif type_id == "94c6b82e1c9340a68dd3c1ce3da03f3a":  # 时序数据
+        datasets = Dataset.query.filter_by(type='table').all()
+
     for dataset in datasets:
         item = {}
         item['id'] = dataset.nickname
