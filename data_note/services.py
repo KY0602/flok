@@ -10,6 +10,7 @@ import math
 from threading import Thread
 from config import Config
 import sys, os
+import csv
 
 NORMAL_STATE=1
 SYNCING_STATE=0
