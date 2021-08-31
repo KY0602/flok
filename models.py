@@ -1286,7 +1286,7 @@ class NoteDataset(db.Model,Base):
     # 为2表示上传anylearn中，为-2表示上传失败
     state = db.Column(db.Integer,default=0)
 
-    note_data_instances = db.relationship("NoteDataInstance",backref="note_dataset",cascade="all, delete")
+    note_data_instances=db.relationship("NoteDataInstance",backref="note_dataset",cascade="all, delete")
     label_instances = db.relationship("LabelInstance",backref="note_dataset",cascade="all, delete")
 
     def __repr__(self):
