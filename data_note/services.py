@@ -10,7 +10,6 @@ import math
 from threading import Thread
 from config import Config
 import sys, os
-import csv
 
 NORMAL_STATE=1
 SYNCING_STATE=0
@@ -49,24 +48,25 @@ def init_note_dataset(note_dataset_id,path):
     :param path: 数据集路径
     :return:
     '''
-    # 根据路径拿到所有数据
+    # 根据路径拿到所有图片
+    # todo
     try:
         note_dataset = NoteDataset.query.get(note_dataset_id)
         type_id = note_dataset.note_dataset_type_id
-        datas = []
-        if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":  # 图片
-            datas = file_sys.get_image_file_dict_list(path)
-        elif type_id == "8019768c89db461db44eb1783a3beb50":  # 文本
+        datas=[]
+        if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":   # 图片
+            datas=file_sys.get_image_file_dict_list(path)
+        elif type_id == "8019768c89db461db44eb1783a3beb50": # 文本
             pass
-        elif type_id == "02217a4cf1854bf09be4237d95f83c02":  # 视频
+        elif type_id == "02217a4cf1854bf09be4237d95f83c02": # 视频
             pass
-        elif type_id == "4624cf7bc59c4636a89a7ee2fbfcf931":  # 音频
+        elif type_id == "4624cf7bc59c4636a89a7ee2fbfcf931": # 音频
             datas = file_sys.get_audio_file_dict_list(path)
         elif type_id == "94c6b82e1c9340a68dd3c1ce3da03f3a":  # 时序数据
             pass
+
     except Exception:
         return None,'路径有误'
-
     for items in datas:
         if items is None:
             continue
@@ -76,6 +76,7 @@ def init_note_dataset(note_dataset_id,path):
         data.note_dataset_id = note_dataset_id
         db.session.add(data)
 
+    # 修改当前标注集状态
     note_dataset = NoteDataset.query.get(note_dataset_id)
     note_dataset.state = NORMAL_STATE
     try:
@@ -119,6 +120,7 @@ def pre_synchronice(params):
 
 def synchronize_note_dataset(note_dataset_id,path):
     NoteDataInstance.query.filter_by(note_dataset_id=note_dataset_id).update({'is_delete': True})
+    # todo
     note_dataset = NoteDataset.query.get(note_dataset_id)
     type_id = note_dataset.note_dataset_type_id
     datas = []
@@ -250,18 +252,18 @@ def list_note_dataset():
     ret=[]
     for note_dataset in note_datasets:
         item={}
-        item['id'] = note_dataset.id    #标注集ID#
-        item['name'] = note_dataset.name    #标注集名字#
-        item['note_dataset_type_id'] = note_dataset.note_dataset_type_id    #数据集类型#
-        item['note_type_id'] = note_dataset.note_type_id    #标注类型ID#
-        item['note_type'] = note_dataset.note_type.name     #标注类型名字#
-        item['data_type'] = note_dataset.note_dataset_type.name     #数据集类型名字#
-        item['state'] = note_dataset.state      #标注集状态#
-        item['file_num'] = len(note_dataset.note_data_instances)      #标注集中文件数#
-        item['description']=note_dataset.description        #标注集描述#
-        item['path'] = note_dataset.path    #标注集路径#
-        num = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset.id,is_note=True).count()     #标注集中已被标注个数#
-        item['process'] = str(num)+'/'+str(item['file_num'])    #“已被标注个数”/“总个数”#
+        item['id'] = note_dataset.id
+        item['name'] = note_dataset.name
+        item['note_dataset_type_id'] = note_dataset.note_dataset_type_id
+        item['note_type_id'] = note_dataset.note_type_id
+        item['note_type'] = note_dataset.note_type.name
+        item['data_type'] = note_dataset.note_dataset_type.name
+        item['state'] = note_dataset.state
+        item['file_num'] = len(note_dataset.note_data_instances)
+        item['description']=note_dataset.description
+        item['path'] = note_dataset.path
+        num = NoteDataInstance.query.filter_by(note_dataset_id=note_dataset.id,is_note=True).count()
+        item['process'] = str(num)+'/'+str(item['file_num'])
         ret.append(item)
     return ret, 'ok'
 
@@ -271,9 +273,9 @@ def list_note_dataset_type():
     ret = []
     for note_dataset_type in note_dataset_types:
         item = {}
-        item['id'] = note_dataset_type.id   #数据集类型ID#
-        item['label'] = note_dataset_type.name      #数据集类型名字#
-        item['value'] = note_dataset_type.id    #数据集类型ID#
+        item['id'] = note_dataset_type.id
+        item['label'] = note_dataset_type.name
+        item['value'] = note_dataset_type.id
         ret.append(item)
     return ret, 'ok'
 
@@ -289,14 +291,15 @@ def list_note_type(params):
     notes = []
     for note_type in note_types:
         item = {}
-        item['id'] = note_type.id   #标注类型ID#
-        item['label'] = note_type.name      #标注类型名字#
-        item['value'] = note_type.id        #标注类型ID#
+        item['id'] = note_type.id
+        item['label'] = note_type.name
+        item['value'] = note_type.id
         notes.append(item)
     ret['note_types'] = notes
 
     paths=[]
-    datasets = []
+    # todo
+    datasets=[]
     type_id = note_dataset_type_id
     if type_id == "27bbe41cca3e43d1b8515b35a6ffb1ab":  # 图片
         datasets = Dataset.query.filter_by(type='image').all()
@@ -405,10 +408,10 @@ def list_note(params):
 
 def save_note_info(note_infos, data_id):
 
-    data_ins = NoteDataInstance.query.get(data_id)
-    if data_ins is None:
-        return None, '数据库中无此id的数据'
-    labels = data_ins.relation_data_labels
+    note_data = NoteDataInstance.query.get(data_id)
+    if note_data is None:
+        return None, '数据库中无此id的图片'
+    labels = note_data.relation_data_labels
     for label in labels:
         db.session.delete(label)
 
@@ -423,9 +426,9 @@ def save_note_info(note_infos, data_id):
         db.session.add(label)
     try:
         if len(note_infos)>0:
-            data_ins.is_note=True
+            note_data.is_note=True
         else:
-            data_ins.is_note=False
+            note_data.is_note=False
         db.session.commit()
         return True,'ok'
     except Exception as e:
@@ -434,10 +437,10 @@ def save_note_info(note_infos, data_id):
 
 
 def get_note_info_list(data_id):
-    data_ins = NoteDataInstance.query.get(data_id)
-    if data_ins is None:
-        return None, '数据库中无此id的数据'
-    labels = data_ins.relation_data_labels
+    note_data = NoteDataInstance.query.get(data_id)
+    if note_data is None:
+        return None, '数据库中无此id的图片'
+    labels = note_data.relation_data_labels
     ret=[]
     for label in labels:
         item={}
@@ -576,27 +579,27 @@ def get_picture_group(params):
 
 def start_note(params):
     '''
-    :param params: dict,参数包括 pic_id, note_dataset_id, show_type
+    :param params: dict,参数包括 data_id, note_dataset_id, show_type
     :return:
     '''
     ret = {}
     if params['data_id'] is None:
         if params['note_dataset_id'] is None:
             return None,{'status':False,'info':'缺少参数'}
-        data = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id'],is_note=False).first()
+        note_data = NoteDataInstance.query.filter_by(note_dataset_id=params['note_dataset_id'],is_note=False).first()
         ret['show_type'] = 'third'
-        if data is None:
+        if note_data is None:
             return None,{'status':True,'info':'您已全部标注'}
     else:
         ret['show_type'] = params['show_type']
-        data = NoteDataInstance.query.filter_by(id=params['data_id']).first()
-        if data is None:
-            return None,{'status':False,'info':'不存在该数据'}
+        note_data = NoteDataInstance.query.filter_by(id=params['data_id']).first()
+        if note_data is None:
+            return None,{'status':False,'info':'不存在该图片'}
 
 
-    ret['id'] = data.id
-    ret['src'] = data.src
-    ret['name'] = data.name
+    ret['id'] = note_data.id
+    ret['src'] = note_data.src
+    ret['name'] = note_data.name
     return ret,'ok'
 
 
@@ -628,7 +631,7 @@ def pre_upload(params):
         return None,str(e)
 
 
-def store_standard_dataset(note_dataset_id, name):
+def store_standard_dataset(note_dataset_id,name):
     note_dataset = NoteDataset.query.get(note_dataset_id)
     dir_id = uuid.uuid4().hex
     if not os.path.exists(Config.ANYLEARN):
@@ -777,8 +780,8 @@ def store_standard_dataset(note_dataset_id, name):
 
 def upload_dataset_to_anylearn(note_dataset_id,name):
     note_dataset = NoteDataset.query.get(note_dataset_id)
-    if note_dataset.note_type_id != "822e2bc74cb749d1b617162a05dfd8fa" and note_dataset.note_type_id != "3d1fa034aa0b4ffe8f7198c027cf959e":
-        store_standard_dataset(note_dataset_id, name)
+    if note_dataset.note_type_id!="822e2bc74cb749d1b617162a05dfd8fa" and note_dataset.note_type_id!="3d1fa034aa0b4ffe8f7198c027cf959e":
+        store_standard_dataset(note_dataset_id,name)
         return 'ok', 'ok'
     dir_id = uuid.uuid4().hex
     if not os.path.exists(Config.ANYLEARN):
@@ -830,7 +833,7 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                     f.write(img)
                 f.close()
 
-        # 图像分类
+        # 图像分类打包
         elif note_dataset.note_type_id == '3d1fa034aa0b4ffe8f7198c027cf959e':
             labels = note_dataset.label_instances
             for label in labels:
@@ -839,16 +842,16 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
                 relation_data_labels = RelationDataLabel.query.filter_by(label_id=label.id).all()
                 count=0
                 for rel in relation_data_labels:
-                    data_path = os.path.join(label_dir,str(count)+'.jpg')
+                    pic_path = os.path.join(label_dir,str(count)+'.jpg')
                     count+=1
                     src = rel.note_data_instance.src
                     FLOK_URL = 'http://' + Config.SERVER_IP + ":" + Config.SERVER_PORT
                     response = requests.get(FLOK_URL+str(src))
                     # 获取的文本实际上是图片的二进制文本
-                    data_ins = response.content
+                    img = response.content
                     # 将他拷贝到本地文件 w 写  b 二进制  wb代表写入二进制文本
-                    with open(data_path, 'wb') as f:
-                        f.write(data_ins)
+                    with open(pic_path, 'wb') as f:
+                        f.write(img)
                     f.close()
 
         startdir = tmp_dir  # 要压缩的文件夹路径
@@ -907,7 +910,5 @@ def upload_dataset_to_anylearn(note_dataset_id,name):
         except Exception as e:
             return None, '修改失败'
         return None, str(e)
-
-
 
 

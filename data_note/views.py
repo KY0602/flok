@@ -32,7 +32,7 @@ def synchronize_note_dataset():
 @data_note_view.route('/note_dataset/start_note', methods=["GET"])
 def start_note():
     '''
-    开始标注，若pic_id为none，随机选一个未标注的图片返回，否则返回pic_id图片；
+    开始标注，若data_id为none，随机选一个未标注的图片返回，否则返回data_id图片；
     show_type有全部图片、已标注、未标注三种可能，返回对应的情况
     note_dataset_id为标注集id
     :return:
@@ -226,7 +226,7 @@ def get_note_list():
 @data_note_view.route('/note_info/save',methods=['POST'])
 def save_note_info():
     '''
-    保存标注信息，picture_id为图片id
+    保存标注信息，data_id为数据id
     note_infos为标注信息
     :return:
     '''
